@@ -1,0 +1,120 @@
+#include <iostream>
+#include <vector>
+#include <chrono>
+#include <iomanip>
+#include <omp.h>
+
+using namespace std;
+using namespace std::chrono;
+
+void merge(int arr[], int l, int m, int r)
+{
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    int L[n1], R[n2];
+
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (int j = 0; j < n2; j++)
+        R[j] = arr[m + 1 + j];
+
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2)
+    {
+        if (L[i] <= R[j])
+        {
+            arr[k] = L[i];
+            i++;
+        }
+        else
+        {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1)
+    {
+        arr[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2)
+    {
+        arr[k] = R[j];
+        j++;
+        k++;
+    }
+}
+
+void mergeSortSequential(int arr[], int l, int r)
+{
+    if (l >= r)
+        return;
+
+    int m = l + (r - l) / 2;
+    mergeSortSequential(arr, l, m);
+    mergeSortSequential(arr, m + 1, r);
+
+    merge(arr, l, m, r);
+}
+
+void mergeSortParallel(int arr[], int l, int r)
+{
+    if (l >= r)
+        return;
+
+    int m = l + (r - l) / 2;
+
+#pragma omp parallel sections
+    {
+#pragma omp section
+        mergeSortParallel(arr, l, m);
+#pragma omp section
+        mergeSortParallel(arr, m + 1, r);
+    }
+
+    merge(arr, l, m, r);
+}
+
+int main()
+{
+
+    int n;
+    cout << "Enter the number of elements: ";
+    cin >> n;
+
+    int *arr = new int[n];
+    cout << "Enter the elements:\n";
+    for (int i = 0; i < n; i++)
+    {
+        cin >> arr[i];
+    }
+
+    auto startSeq = high_resolution_clock::now();
+    mergeSortSequential(arr, 0, n - 1);
+    auto stopSeq = high_resolution_clock::now();
+    cout<<"\n sorted array is :";
+    for (int i = 0; i < n; i++)
+    {
+        cout << arr[i];
+    }
+    auto durationSeq = duration_cast<nanoseconds>(stopSeq - startSeq).count() / 1e9;
+    cout << "\nSequential Merge Sort Execution Time: " << fixed << setprecision(10) << durationSeq << " seconds" << endl;
+
+    auto startPar = high_resolution_clock::now();
+    mergeSortParallel(arr, 0, n - 1);
+    auto stopPar = high_resolution_clock::now();
+    cout<<"\n sorted array is :";
+    for (int i = 0; i < n; i++)
+    {
+        cout << arr[i];
+    }
+    auto durationPar = duration_cast<nanoseconds>(stopPar - startPar).count() / 1e9;
+    cout << "\nParallel Merge Sort Execution Time: " << fixed << setprecision(10) << durationPar << " seconds" << endl;
+
+    return 0;
+}
